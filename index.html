@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+<head>
+    <meta charset="utf-8">
+    <title>Seattle Traffic Signals</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+
+    <!-- Including the Mapbox GL CSS file -->
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.css" rel="stylesheet">
+
+    <!-- Including the Mapbox GL JS file -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.js"></script>
+
+    <style>
+        /* CSS styles for the layout and components */
+        * {
+            font-family: sans-serif;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #container {
+            display: flex;
+            height: 100vh;
+            flex-direction: row;
+            align-items: stretch;
+        }
+
+        #side-panel {
+            /* flex-basis: 500px;
+            overflow-y: scroll; */
+            width: 300px; /* Adjust the width as needed */
+            /* background-color: #f0f0f0; Set the background color */
+            padding: 20px;
+            /* box-shadow: -5px 0 5px rgba(0, 0, 0, 0.2); Add a shadow on the left side */
+            overflow: auto;
+        }
+
+        #map {
+            /* flex-grow: 1; */
+            flex: 1;
+        }
+
+        #side-panel h2 {
+            margin-bottom: 10px;
+        }
+
+        /* Style the side panel button */
+        button {
+            background-color: #007bff;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+        }
+
+        table {
+            border-collapse: collapse;
+            border-spacing: 0;
+            width: 100%;
+            border: 1px solid #ddd;
+        }
+
+        th,
+        td {
+            text-align: left;
+            font-size: 8;
+            padding: 12px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+
+<body>
+    <main id="container">
+        <div id="map"></div>
+        <div id="side-panel">
+
+            <h2>Seattle Traffic Signals</h2>
+            <button>Sort by Condition</button>
+
+            <table>
+                <tr>
+                    <th>ID</th>
+                    <th>Condition</th>
+                    <th>Pedestrian Signals</th>
+                </tr>
+            </table>
+
+        </div>
+        
+
+    </main>
+    <script>
+        // Define the Mapbox access token
+        mapboxgl.accessToken =
+            'pk.eyJ1IjoiamFrb2J6aGFvIiwiYSI6ImNpcms2YWsyMzAwMmtmbG5icTFxZ3ZkdncifQ.P9MBej1xacybKcDN_jehvw';
+
+        // Create the map object
+        let map = new mapboxgl.Map({
+            container: 'map', // container ID
+            style: 'mapbox://styles/mapbox/light-v11', // style URL
+            zoom: 4 // starting zoom
+        });
+
+        async function geojsonFetch() {
+
+            let response, traffic_signals, seattle, table;
+            response = await fetch('assets/seattle.geojson');
+            seattle = await response.json();
+            response = await fetch('assets/ped_traffic_signals.geojson');
+            traffic_signals = await response.json();
+
+            table = document.getElementsByTagName("table")[0];
+            let row, cell1, cell2, cell3;
+            for (let i = 0; i < traffic_signals.features.length; i++) {
+                // Create an empty <tr> element and add it to the 1st position of the table:
+                row = table.insertRow(-1);
+                cell1 = row.insertCell(0);
+                cell2 = row.insertCell(1);
+                cell3 = row.insertCell(2);
+                cell1.innerHTML = traffic_signals.features[i].properties.UNITID;
+                cell2.innerHTML = traffic_signals.features[i].properties.CONDITION.toLowerCase();
+
+                if (traffic_signals.features[i].properties.PEDSIGNALYN === "Y") {
+                    cell3.innerHTML = "Yes";
+                } else if (traffic_signals.features[i].properties.PEDSIGNALYN === "N") {
+                    cell3.innerHTML = "No";
+                } else {
+                    cell3.innerHTML = "N/A";
+                }
+
+            }
+
+
+            //load data to the map as new layers and table on the side.
+            map.on('load', function loadingData() {
+
+                map.addSource('seattle', {
+                    type: 'geojson',
+                    data: seattle
+                });
+
+                map.addLayer({
+                    'id': 'seattle-layer',
+                    'type': 'fill',
+                    'source': 'seattle',
+                    'paint': {
+                        'fill-color': '#5b808c', // blue color fill
+                        'fill-opacity': 0.5
+                    }
+                });
+                
+                map.addSource('traffic_signals', {
+                    type: 'geojson',
+                    data: traffic_signals
+                });
+
+                map.addLayer({
+                    'id': 'traffic_signals-layer',
+                    'type': 'circle',
+                    'source': 'traffic_signals',
+                    'paint': {
+                        'circle-radius': 4,
+                        'circle-stroke-width': 1,
+                        'circle-color': [
+                            'match',
+                            ['get', 'PEDSIGNALYN'],
+                            'Y', 'green', // If PEDSIGNALYN is 'Y', set the color to green
+                            'N', 'gray',  // If PEDSIGNALYN is 'N', set the color to gray
+                            'red'          // Default color (if PEDSIGNALYN is neither 'Y' nor 'N')
+                        ],
+                        'circle-stroke-color': 'white'
+                    }
+                });
+
+                // Calculate the bounds for the "seattle" layer
+                const bounds = new mapboxgl.LngLatBounds();
+        
+                // Extend the 'LngLatBounds' to include every coordinate in the bounds result.
+                for (let i = 0; i < seattle.features.length; i++) {
+                    const coordinates = seattle.features[i].geometry.coordinates[0];
+                    for (const coord of coordinates) {
+                        bounds.extend(coord);
+                    }
+                };
+
+                map.fitBounds(bounds, {   padding: 20  });
+
+
+            });
+            
+            
+        }
+
+        geojsonFetch();
+
+        let btn = document.getElementsByTagName("button")[0];
+
+        btn.addEventListener('click', sortTable);
+
+        // // define the function to sort table
+        function sortTable(e) {
+            let table, rows, switching, i, x, y, shouldSwitch;
+            table = document.getElementsByTagName("table")[0];
+            switching = true;
+            /*Make a loop that will continue until
+            no switching has been done:*/
+            while (switching) {
+                //start by saying: no switching is done:
+                switching = false;
+                rows = table.rows;
+                /*Loop through all table rows (except the
+                first, which contains table headers):*/
+                for (i = 1; i < (rows.length - 1); i++) {
+                    //start by saying there should be no switching:
+                    shouldSwitch = false;
+                    /*Get the two elements you want to compare,
+                    one from current row and one from the next:*/
+                    x = rows[i].getElementsByTagName("td")[1].innerHTML.toLowerCase();
+                    y = rows[i + 1].getElementsByTagName("td")[1].innerHTML.toLowerCase();
+                    //check if the two rows should switch place:
+                    if (x > y) {
+                        //if so, mark as a switch and break the loop:
+                        shouldSwitch = true;
+                        break;
+                    }
+                }
+                if (shouldSwitch) {
+                    /*If a switch has been marked, make the switch
+                    and mark that a switch has been done:*/
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                }
+            }
+        }
+    </script>
+
+</body>
+
+</html>

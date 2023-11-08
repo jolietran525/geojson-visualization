@@ -12,6 +12,8 @@
     <!-- Including the Mapbox GL JS file -->
     <script src="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.js"></script>
 
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
+
     <style>
         /* CSS styles for the layout and components */
         * {
@@ -30,14 +32,14 @@
             align-items: stretch;
         }
 
-        #side-panel {
-            /* flex-basis: 500px;
-            overflow-y: scroll; */
-            width: 300px; /* Adjust the width as needed */
-            /* background-color: #f0f0f0; Set the background color */
+        .panel {
+            width: 400px; /* Adjust the width as needed */
             padding: 20px;
-            /* box-shadow: -5px 0 5px rgba(0, 0, 0, 0.2); Add a shadow on the left side */
             overflow: auto;
+        }
+
+        .icon {
+            display: none;
         }
 
         #map {
@@ -45,17 +47,14 @@
             flex: 1;
         }
 
-        #side-panel h2 {
+        .panel h2 {
             margin-bottom: 10px;
         }
 
         /* Style the side panel button */
-        button {
-            background-color: #007bff;
-            color: #fff;
-            padding: 10px 20px;
-            border: none;
-            cursor: pointer;
+        .selector {
+            margin-top: 20px;
+            margin-bottom: 20px;
         }
 
         table {
@@ -63,6 +62,10 @@
             border-spacing: 0;
             width: 100%;
             border: 1px solid #ddd;
+        }
+
+        th.sort {
+            cursor: pointer;
         }
 
         th,
@@ -75,30 +78,105 @@
         tr:nth-child(even) {
             background-color: #f2f2f2;
         }
+
+        @media screen and (max-width: 1024px) {
+            .panel_content {
+                display: none;
+            }
+
+            .panel  {
+                width:fit-content;
+                padding: 0px;
+            }
+
+            .icon {
+                display: inline-block; /* Display the menu icon */
+                position: absolute;
+                top: 10px;
+                right: 10px; /* Adjust the position as needed */
+                z-index: 2; /* Ensure it's on top of the map */
+                background: transparent; /* Set the background to transparent */
+                color: rgb(139, 104, 27); /* Text color */
+                padding: 20px;
+                font-size: 25px;
+                cursor: pointer;
+            }
+
+            #side-panel.responsive .panel_content {
+                display: block;
+                width: 100%;
+                max-width: 400px; /* Adjust the maximum width as needed */
+                padding: 20px 20px 20px 20px;
+                overflow: auto;
+            }
+
+
+            #side-panel.responsive .icon {
+                position: absolute;
+            }
+
+        }
     </style>
 </head>
 
 <body>
     <main id="container">
         <div id="map"></div>
-        <div id="side-panel">
-
-            <h2>Seattle Traffic Signals</h2>
-            <button>Sort by Condition</button>
-
-            <table>
-                <tr>
-                    <th>ID</th>
-                    <th>Condition</th>
-                    <th>Pedestrian Signals</th>
-                </tr>
-            </table>
-
-        </div>
         
+        <div class= "panel" id="side-panel">
+            <div id="menu-icon">
+                <a href="javascript:void(0);" class="icon">
+                    <i class="fa fa-bars"></i>
+                </a>
+            </div>
+            <div class="panel_content">
+                <h2>Seattle Traffic Signals with Pedestrian Head</h2>
+                <div class="selector">
+                    <label for="styleSelector">Select Style:</label>
+                    <select id="styleSelector" onchange="updateLayerStyle()">
+                        <option value="0">No Style</option>
+                        <option value="1">Condition</option>
+                        <option value="2">Audio Device</option>
+                    </select>
+                </div>
+                
+
+                <table>
+                    <tr>
+                        <th class="no-sort">ID</th>
+                        <th class="sort" onclick="sortTable(1)">Condition <i class="fa fa-fw fa-sort"></i></th>
+                        <th class="sort" onclick="sortTable(2)">Audio Device <i class="fa fa-fw fa-sort"></i></th>
+                    </tr>
+                </table>
+            </div>
+        </div>
 
     </main>
+    
     <script>
+
+       // Get the element with the class "icon"
+        let icon = document.getElementsByClassName("icon")[0];
+
+        // Get the element with the ID "side-panel" (not "myTopnav")
+        let sidePanel = document.getElementById("side-panel");
+
+        // Add an event listener for the 'click' event on the icon element
+        icon.addEventListener('click', responsive_control);
+
+        // Function to control the responsiveness of the navigation bar
+        function responsive_control() {
+            // Check if the class name of the element is "panel"
+            if (sidePanel.className === "panel") {
+                // If it is, add the "responsive" class to the element
+                sidePanel.className += " responsive";
+            } else {
+                // If it's not, remove the "responsive" class from the element
+                sidePanel.className = "panel";
+            }
+        };
+
+
         // Define the Mapbox access token
         mapboxgl.accessToken =
             'pk.eyJ1IjoiamFrb2J6aGFvIiwiYSI6ImNpcms2YWsyMzAwMmtmbG5icTFxZ3ZkdncifQ.P9MBej1xacybKcDN_jehvw';
@@ -107,7 +185,8 @@
         let map = new mapboxgl.Map({
             container: 'map', // container ID
             style: 'mapbox://styles/mapbox/light-v11', // style URL
-            zoom: 4 // starting zoom
+            zoom: 4, // starting zoom
+            center: [-122.33408150629016, 47.60678523976927]
         });
 
         async function geojsonFetch() {
@@ -115,7 +194,7 @@
             let response, traffic_signals, seattle, table;
             response = await fetch('assets/seattle.geojson');
             seattle = await response.json();
-            response = await fetch('assets/ped_sig.geojson');
+            response = await fetch('assets/ped_sig_head.geojson');
             traffic_signals = await response.json();
 
             table = document.getElementsByTagName("table")[0];
@@ -152,13 +231,7 @@
                     'paint': {
                         'circle-radius': 4,
                         'circle-stroke-width': 1,
-                        'circle-color': [
-                            'match',
-                            ['get', 'PEDSIGNALYN'],
-                            'Y', 'green', // If PEDSIGNALYN is 'Y', set the color to green
-                            'N', 'red',  // If PEDSIGNALYN is 'N', set the color to gray
-                            'gray'          // Default color (if PEDSIGNALYN is neither 'Y' nor 'N')
-                        ],
+                        'circle-color': '#11aebd',
                         'circle-stroke-color': 'white'
                     }
                 });
@@ -192,15 +265,15 @@
                     } else if (traffic_signals.features[i].properties.CONDITION.toLowerCase() === "poor") {
                         cell2.innerHTML = "poor";
                     } else {
-                        cell2.innerHTML = "unidentified";
+                        cell2.innerHTML = "unknown";
                     }
 
-                    if (traffic_signals.features[i].properties.PEDSIGNALYN === "Y") {
+                    if (traffic_signals.features[i].properties.PEDAUDIODEVICEYN === "Y") {
                         cell3.innerHTML = "yes";
-                    } else if (traffic_signals.features[i].properties.PEDSIGNALYN === "N") {
+                    } else if (traffic_signals.features[i].properties.PEDAUDIODEVICEYN === "N") {
                         cell3.innerHTML = "no";
                     } else {
-                        cell3.innerHTML = "unidentified";
+                        cell3.innerHTML = "unknown";
                     }
                 };
             });
@@ -209,15 +282,64 @@
 
         geojsonFetch();
 
-        let btn = document.querySelector("button");
+    
 
-        btn.addEventListener('click', sortTable);
+        function updateLayerStyle() {
+            // Get the selected value from the dropdown list
+            const select = document.getElementById("styleSelector");
+            const selectedValue = select.value;
+
+            // Define the Mapbox layer ID
+            const layerId = 'traffic_signals-layer';
+
+            // Get the Mapbox source
+            const trafficSignalsSource = map.getSource('traffic_signals');
+
+            if (trafficSignalsSource) {
+                let styleExpression;
+
+                if (selectedValue === "1") {
+                    styleExpression = [
+                        'match',
+                        ['get', 'CONDITION'], // Get the 'CONDITION' property
+                        'GOOD', '#4ea665',      // If CONDITION is 'good', set color to green
+                        'FAIR', '#cfba21',     // If CONDITION is 'fair', set color to yellow
+                        'POOR', '#c42416',        // If CONDITION is 'poor', set color to red
+                        ' ', 'gray',   // If CONDITION is 'unknown', set color to gray
+                        'gray'               // Default color for other values
+                    ];
+                } else if (selectedValue === "2") {
+                    styleExpression = [
+                        'match',
+                        ['get', 'PEDAUDIODEVICEYN'], // Get the 'CONDITION' property
+                        'Y', '#4ea665',      // If CONDITION is 'good', set color to green
+                        'N', '#c42416',        // If CONDITION is 'poor', set color to red
+                        'gray'               // Default color for other values
+                    ];
+                } else if (selectedValue === "0") {
+                    // If "No Style" is selected, you can define a default style or simply remove the style
+                    // Example with a default style:
+                    styleExpression = [
+                        'match',
+                        ['get', 'default_property'],
+                        'default_value', '#11aebd',
+                        '#11aebd'
+                    ];
+                }
+
+                // Set the new style expression for 'circle-color' property
+                map.setPaintProperty(layerId, 'circle-color', styleExpression);
+            }
+        };
+
 
         // define the function to sort table
-        function sortTable(e) {
-            let table, rows, switching, i, x, y, shouldSwitch;
+        function sortTable(n) {
+            var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
             table = document.getElementsByTagName("table")[0];
             switching = true;
+            //Set the sorting direction to ascending:
+            dir = "asc"; 
             /*Make a loop that will continue until
             no switching has been done:*/
             while (switching) {
@@ -227,27 +349,46 @@
                 /*Loop through all table rows (except the
                 first, which contains table headers):*/
                 for (i = 1; i < (rows.length - 1); i++) {
-                    //start by saying there should be no switching:
-                    shouldSwitch = false;
-                    /*Get the two elements you want to compare,
-                    one from current row and one from the next:*/
-                    x = rows[i].getElementsByTagName("TD")[1].innerHTML;
-                    y = rows[i + 1].getElementsByTagName("TD")[1].innerHTML;
-                    //check if the two rows should switch place:
-                    if (x.toLowerCase() > y.toLowerCase()) {
-                        //if so, mark as a switch and break the loop:
-                        shouldSwitch = true;
-                        break;
+                //start by saying there should be no switching:
+                shouldSwitch = false;
+                /*Get the two elements you want to compare,
+                one from current row and one from the next:*/
+                x = rows[i].getElementsByTagName("TD")[n];
+                y = rows[i + 1].getElementsByTagName("TD")[n];
+                /*check if the two rows should switch place,
+                based on the direction, asc or desc:*/
+                if (dir == "asc") {
+                    if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                    //if so, mark as a switch and break the loop:
+                    shouldSwitch= true;
+                    break;
+                    }
+                } else if (dir == "desc") {
+                    if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                    //if so, mark as a switch and break the loop:
+                    shouldSwitch = true;
+                    break;
                     }
                 }
+                }
                 if (shouldSwitch) {
-                    /*If a switch has been marked, make the switch
-                    and mark that a switch has been done:*/
-                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                /*If a switch has been marked, make the switch
+                and mark that a switch has been done:*/
+                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                switching = true;
+                //Each time a switch is done, increase this count by 1:
+                switchcount ++;      
+                } else {
+                /*If no switching has been done AND the direction is "asc",
+                set the direction to "desc" and run the while loop again.*/
+                if (switchcount == 0 && dir == "asc") {
+                    dir = "desc";
                     switching = true;
                 }
+                };
+
             }
-        }
+            }
 
     </script>
 

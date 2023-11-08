@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Seattle Traffic Signals</title>
+    <title>Seattle Pedestrian Signals</title>
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
 
     <!-- Including the Mapbox GL CSS file -->
@@ -36,6 +36,7 @@
             width: 400px; /* Adjust the width as needed */
             padding: 20px;
             overflow: auto;
+            z-index: 1;
         }
 
         .icon {
@@ -43,7 +44,6 @@
         }
 
         #map {
-            /* flex-grow: 1; */
             flex: 1;
         }
 
@@ -189,7 +189,7 @@
                 </a>
             </div>
             <div class="panel_content">
-                <h2>Seattle Traffic Signals with Pedestrian Head</h2>
+                <h2>Seattle Pedestrian Signals</h2>
                 <div class="selector">
                     <label for="styleSelector">Select Style:</label>
                     <select id="styleSelector" onchange="updateLayerStyle()">

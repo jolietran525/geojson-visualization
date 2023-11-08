@@ -79,6 +79,33 @@
             background-color: #f2f2f2;
         }
 
+        /* Common CSS styles for both legends */
+        .legend {
+            float: left;
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ccc;
+            padding: 10px;
+            max-width: 200px;
+            z-index: 1;
+            display: none; /* Hide all legends by default */
+        }
+
+        /* CSS styles for the Condition legend */
+        #condition-legend, #audio-device-legend {
+            top: 20px;
+            left: 20px;
+        }
+
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            display: inline-block;
+            border-radius: 50%;
+            border: 1px solid white ;
+        }
+
+
         @media screen and (max-width: 1024px) {
             .panel_content {
                 display: none;
@@ -121,8 +148,40 @@
 
 <body>
     <main id="container">
-        <div id="map"></div>
-        
+        <div id="map">
+           <div id="condition-legend" class="legend">
+                <h3>Condition</h3>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #4ea665;"></span>
+                    <span class="legend-label">Good Condition</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #cfba21;"></span>
+                    <span class="legend-label">Fair Condition</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #c42416;"></span>
+                    <span class="legend-label">Poor Condition</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: grey;"></span>
+                    <span class="legend-label">Unknown</span>
+                </div>
+            </div>
+          
+            <div id="audio-device-legend" class="legend">
+                <h3>Audio Device</h3>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #4ea665;"></span>
+                    <span class="legend-label">Audio Device</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #c42416;"></span>
+                    <span class="legend-label">No Audio Device</span>
+                </div>
+            </div>
+        </div>
+
         <div class= "panel" id="side-panel">
             <div id="menu-icon">
                 <a href="javascript:void(0);" class="icon">
@@ -214,7 +273,7 @@
                     'type': 'fill',
                     'source': 'seattle',
                     'paint': {
-                        'fill-color': '#5b808c', // blue color fill
+                        'fill-color': '#5b808c',
                         'fill-opacity': 0.5
                     }
                 });
@@ -231,7 +290,7 @@
                     'paint': {
                         'circle-radius': 4,
                         'circle-stroke-width': 1,
-                        'circle-color': '#11aebd',
+                        'circle-color': '#4287f5',
                         'circle-stroke-color': 'white'
                     }
                 });
@@ -292,6 +351,10 @@
             // Define the Mapbox layer ID
             const layerId = 'traffic_signals-layer';
 
+            // Hide all legends by default
+            document.getElementById('condition-legend').style.display = 'none';
+            document.getElementById('audio-device-legend').style.display = 'none';
+
             // Get the Mapbox source
             const trafficSignalsSource = map.getSource('traffic_signals');
 
@@ -308,6 +371,7 @@
                         ' ', 'gray',   // If CONDITION is 'unknown', set color to gray
                         'gray'               // Default color for other values
                     ];
+                    document.getElementById('condition-legend').style.display = 'block';
                 } else if (selectedValue === "2") {
                     styleExpression = [
                         'match',
@@ -316,15 +380,19 @@
                         'N', '#c42416',        // If CONDITION is 'poor', set color to red
                         'gray'               // Default color for other values
                     ];
+                    document.getElementById('audio-device-legend').style.display = 'block';
                 } else if (selectedValue === "0") {
                     // If "No Style" is selected, you can define a default style or simply remove the style
                     // Example with a default style:
                     styleExpression = [
                         'match',
                         ['get', 'default_property'],
-                        'default_value', '#11aebd',
-                        '#11aebd'
+                        'default_value', '#4287f5',
+                        '#4287f5'
                     ];
+                    // Hide all legends by default
+                    document.getElementById('condition-legend').style.display = 'none';
+                    document.getElementById('audio-device-legend').style.display = 'none';
                 }
 
                 // Set the new style expression for 'circle-color' property

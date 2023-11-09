@@ -20,9 +20,9 @@
             font-family: sans-serif;
         }
         
-        body {
+        body, html {
+            height: 100%; /* make sure html and body fill the entire screen */
             margin: 0;
-            padding: 0;
         }
 
         #container {
@@ -32,19 +32,33 @@
             align-items: stretch;
         }
 
-        .panel {
-            width: 400px; /* Adjust the width as needed */
-            padding: 20px;
-            overflow: auto;
+        #map {
+            position: absolute; /* make the map cover the full screen */
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
             z-index: 1;
+        }
+
+        .panel {
+            position: absolute; /* make the panel hover over the map */
+            top: 0; /* align to the top */
+            right: 0; /* align to the right side of the viewport */
+            height: 100%; /* make the panel full height */
+            width: 400px; /* width of the side panel */
+            background-color: rgba(255, 255, 255, 0.8); /* semi-transparent background */
+            z-index: 2; /* ensure it's above the map */
+            box-shadow: -3px 0 5px rgba(0,0,0,0.2); /* optional: add shadow for better contrast */
+            overflow-y: auto; /* enable scrolling if the content is too long */
+        }
+
+        .panel_content {
+            padding: 20px;
         }
 
         .icon {
             display: none;
-        }
-
-        #map {
-            flex: 1;
         }
 
         .panel h2 {
@@ -107,41 +121,32 @@
 
 
         @media screen and (max-width: 1024px) {
-            .panel_content {
-                display: none;
-            }
-
-            .panel  {
-                width:fit-content;
-                padding: 0px;
+            .panel {
+                display: none; /* Hide the entire panel */
             }
 
             .icon {
                 display: inline-block; /* Display the menu icon */
-                position: absolute;
+                position: fixed;
                 top: 10px;
-                right: 10px; /* Adjust the position as needed */
-                z-index: 2; /* Ensure it's on top of the map */
-                background: transparent; /* Set the background to transparent */
-                color: rgb(139, 104, 27); /* Text color */
+                right: 10px;
+                z-index: 3; 
+                background: transparent;
+                color: rgb(139, 104, 27);
                 padding: 20px;
                 font-size: 25px;
                 cursor: pointer;
             }
 
-            #side-panel.responsive .panel_content {
+            .icon:hover {
+                color: rgb(206, 169, 91);
+            }
+            
+            .panel.responsive {
                 display: block;
-                width: 100%;
-                max-width: 400px; /* Adjust the maximum width as needed */
-                padding: 20px 20px 20px 20px;
-                overflow: auto;
-            }
-
-
-            #side-panel.responsive .icon {
                 position: absolute;
+                z-index: 2;
             }
-
         }
     </style>
 </head>
@@ -182,12 +187,14 @@
             </div>
         </div>
 
+        <div id="menu-icon">
+            <a href="javascript:void(0);" class="icon" onclick="responsive_control()">
+                <i class="fa fa-bars"></i>
+            </a>
+        </div>
+
         <div class= "panel" id="side-panel">
-            <div id="menu-icon">
-                <a href="javascript:void(0);" class="icon">
-                    <i class="fa fa-bars"></i>
-                </a>
-            </div>
+
             <div class="panel_content">
                 <h2>Seattle Pedestrian Signals</h2>
                 <div class="selector">
@@ -199,7 +206,6 @@
                     </select>
                 </div>
                 
-
                 <table>
                     <tr>
                         <th class="no-sort">ID</th>
@@ -214,17 +220,9 @@
     
     <script>
 
-       // Get the element with the class "icon"
-        let icon = document.getElementsByClassName("icon")[0];
-
-        // Get the element with the ID "side-panel" (not "myTopnav")
-        let sidePanel = document.getElementById("side-panel");
-
-        // Add an event listener for the 'click' event on the icon element
-        icon.addEventListener('click', responsive_control);
-
         // Function to control the responsiveness of the navigation bar
         function responsive_control() {
+            let sidePanel = document.getElementById("side-panel");
             // Check if the class name of the element is "panel"
             if (sidePanel.className === "panel") {
                 // If it is, add the "responsive" class to the element
@@ -244,7 +242,7 @@
         let map = new mapboxgl.Map({
             container: 'map', // container ID
             style: 'mapbox://styles/mapbox/light-v11', // style URL
-            zoom: 4, // starting zoom
+            zoom: 7,
             center: [-122.33408150629016, 47.60678523976927]
         });
 
